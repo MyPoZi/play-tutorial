@@ -32,12 +32,7 @@ class PostController @Inject()(db: Database, cc: ControllerComponents) extends A
     db.withConnection { implicit conn =>
       val records = SQL("SELECT * FROM posts").as(postsParser.*)
       for (s <- records) {
-        tmp_map += "id" -> s.id
-        tmp_map += "user_id" -> s.user_id
-        tmp_map += "text" -> s.text
-        tmp_map += "posted_at" -> s.posted_at.toString
-        println(tmp_map)
-        println(s.id)
+        tmp_map += ("id" -> s.id, "user_id" -> s.user_id, "text" -> s.text, "posted_at" -> s.posted_at.toString)
         if (count == 0) {
           result = Seq(tmp_map)
         } else {
@@ -45,9 +40,6 @@ class PostController @Inject()(db: Database, cc: ControllerComponents) extends A
         }
         count += 1
       }
-      println(result)
-      println("hoge")
-//      Ok(Json.toJson(Map("posts" -> records)))
       Ok(Json.toJson("posts" -> result))
     }
   }
