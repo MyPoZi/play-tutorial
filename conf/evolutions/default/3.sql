@@ -8,8 +8,6 @@ CREATE TABLE comments (
   PRIMARY KEY (id),
   FOREIGN KEY(user_id)
   REFERENCES test_users(id),
-  FOREIGN KEY(parent_post_id)
-  REFERENCES posts(id),
 
 );
 

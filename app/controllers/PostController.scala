@@ -12,6 +12,8 @@ import anorm._
 class PostController @Inject()(db: Database, cc: ControllerComponents) extends AbstractController(cc) {
 
   case class postsData(id: String, user_id: String, text: String, posted_at: Date)
+  case class commentsData(id: String, user_id: String, text: String, parent_post_id: String, posted_at: Date)
+
 
   val postsParser = {
     SqlParser.str("id") ~
@@ -23,6 +25,17 @@ class PostController @Inject()(db: Database, cc: ControllerComponents) extends A
       postsData(id, user_id, text, posted_at)
   }
 
+  val commentsParser = {
+    SqlParser.str("id") ~
+      SqlParser.str("user_id") ~
+      SqlParser.str("text") ~
+      SqlParser.str("parent_post_id") ~
+      SqlParser.date("posted_at")
+  } map {
+    case id ~ user_id ~ text ~ parent_post_id ~ posted_at =>
+      commentsData(id, user_id, text, parent_post_id,  posted_at)
+  }
+
 
   def index() = Action { implicit request =>
     var user_id = ""
@@ -30,7 +43,8 @@ class PostController @Inject()(db: Database, cc: ControllerComponents) extends A
     var result = Seq(Map[String, String]())
     var count:Int = 0
     db.withConnection { implicit conn =>
-      val records = SQL("SELECT * FROM posts").as(postsParser.*)
+      val records = SQL("SELECT id, user_id, text, posted_at FROM posts").as(postsParser.*)
+//      val records = SQL("SELECT * FROM posts LEFT OUTER JOIN comments ON posts.id = commnets.").as(postsParser.*)
       for (s <- records) {
         tmp_map += ("id" -> s.id, "user_id" -> s.user_id, "text" -> s.text, "posted_at" -> s.posted_at.toString)
         if (count == 0) {
