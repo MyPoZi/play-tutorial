@@ -35,7 +35,6 @@ class CommentController @Inject()(db: Database, cc: ControllerComponents) extend
     db.withConnection { implicit conn =>
       val records = SQL("SELECT * FROM comments WHERE parent_post_id = {id}").on("id" -> post_id).as(commentsParser.*)
       for (record <- records) {
-        println(record)
         tmp_map += ("id" -> record.id, "user_id" -> record.user_id, "text" -> record.text, "parent_post_id" -> record.parent_post_id,
           "comment_count" -> SQL("SELECT COUNT(*) FROM comments WHERE parent_post_id = {id}").on("id" -> record.id).as(SqlParser.int("COUNT(*)").singleOpt).getOrElse("0").toString, "posted_at" -> record.posted_at.toString)
         if (count == 0) {

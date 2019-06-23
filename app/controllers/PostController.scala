@@ -43,10 +43,14 @@ class PostController @Inject()(db: Database, cc: ControllerComponents) extends A
     var result = Seq(Map[String, String]())
     var count:Int = 0
     db.withConnection { implicit conn =>
-      val records = SQL("SELECT id, user_id, text, posted_at FROM posts").as(postsParser.*)
-//      val records = SQL("SELECT * FROM posts LEFT OUTER JOIN comments ON posts.id = commnets.").as(postsParser.*)
+      val records1 = SQL("SELECT id, user_id, text, posted_at FROM posts").as(postsParser.*)
+      val records2 = SQL("SELECT * FROM comments").as(commentsParser.*)
+      val records = records1 +: records2
+      println(records)
+//      val records = SQL("SELECT * FROM posts").as(postsParser.*)
       for (s <- records) {
-        tmp_map += ("id" -> s.id, "user_id" -> s.user_id, "text" -> s.text, "posted_at" -> s.posted_at.toString)
+        println(s)
+//        tmp_map += ("id" -> s.id, "user_id" -> s.user_id, "text" -> s.text, "posted_at" -> s.posted_at.toString)
         if (count == 0) {
           result = Seq(tmp_map)
         } else {
