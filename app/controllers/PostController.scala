@@ -1,47 +1,24 @@
 package controllers
 
-import java.util.Date
-
 import javax.inject._
 import play.api.mvc._
 import play.api.db.Database
 import play.api.libs.json.{JsValue, Json}
 import anorm._
-import play.api.data.Form
-import play.api.data.Forms.{mapping, text}
+
+import models.Post._
+import Util._
 
 @Singleton
 class PostController @Inject()(db: Database, cc: ControllerComponents) extends AbstractController(cc) {
-
-  case class commentsData(id: String, user_id: String, text: String, parent_post_id: Option[String], posted_at: Date)
-
-  case class PostFormData(user_id: String, text: String)
-
-  val commentsParser = {
-    SqlParser.str("id") ~
-      SqlParser.str("user_id") ~
-      SqlParser.str("text") ~
-      SqlParser.get[Option[String]]("parent_post_id") ~
-      SqlParser.date("posted_at")
-  } map {
-    case id ~ user_id ~ text ~ parent_post_id ~ posted_at =>
-      commentsData(id, user_id, text, parent_post_id, posted_at)
-  }
-
-  val postForm = Form(
-    mapping(
-      "user_id" -> text,
-      "text" -> text.verifying("1文字以上入力してください", _.length >= 1).verifying("100文字以下で入力してください", _.length <= 100)
-    )(PostFormData.apply)(PostFormData.unapply)
-  )
-
 
   def index() = Action { implicit request =>
     var tempMap = Map[String, JsValue]()
     var result = Seq(Map[String, JsValue]())
     var count: Int = 0
     db.withConnection { implicit conn =>
-      val records = SQL("SELECT * FROM posts ORDER BY posted_at DESC").as(commentsParser.*)
+      // postsから全ての投稿を抽出
+      val records = SQL("SELECT * FROM posts ORDER BY posted_at DESC").as(postParser.*)
       for (record <- records) {
         tempMap += ("id" -> Json.toJson(record.id), "user_id" -> Json.toJson(record.user_id), "text" -> Json.toJson(record.text), "parent_post_id" -> Json.toJson(record.parent_post_id.getOrElse(null)),
           "comment_count" -> Json.toJson(SQL("SELECT COUNT(*) FROM posts WHERE parent_post_id = {id}").on("id" -> record.id).as(SqlParser.int("COUNT(*)").singleOpt).getOrElse(0)), "posted_at" -> Json.toJson(record.posted_at.toString))
@@ -70,7 +47,6 @@ class PostController @Inject()(db: Database, cc: ControllerComponents) extends A
           if (isExistUser.getOrElse(null) != postData.user_id) {
             isBadRequestFlag = "does_not_exist_user"
           } else {
-            println(postData.user_id, postData.text)
             SQL("INSERT INTO posts (id, user_id, text) VALUES ({id}, {user_id}, {text})")
               .on(
                 "id" -> uuid,
@@ -87,7 +63,4 @@ class PostController @Inject()(db: Database, cc: ControllerComponents) extends A
       }
     )
   }
-
-    def uuid = java.util.UUID.randomUUID.toString
-
-  }
+}

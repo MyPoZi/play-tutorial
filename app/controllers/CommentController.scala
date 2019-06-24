@@ -1,46 +1,24 @@
 package controllers
 
-import java.util.Date
-
 import javax.inject.{Inject, Singleton}
 import play.api.db.Database
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{AbstractController, ControllerComponents}
 import anorm._
-import play.api.data._
-import play.api.data.Forms._
+
+import models.Post._
+import Util._
 
 @Singleton
 class CommentController @Inject()(db: Database, cc: ControllerComponents) extends AbstractController(cc) {
-
-  case class commentsData(id: String, user_id: String, text: String, parent_post_id: String, posted_at: Date)
-
-  case class CommentFormData(user_id: String, text: String)
-
-  val commentsParser = {
-    SqlParser.str("id") ~
-      SqlParser.str("user_id") ~
-      SqlParser.str("text") ~
-      SqlParser.str("parent_post_id") ~
-      SqlParser.date("posted_at")
-  } map {
-    case id ~ user_id ~ text ~ parent_post_id ~ posted_at =>
-      commentsData(id, user_id, text, parent_post_id, posted_at)
-  }
-
-  val commentForm = Form(
-    mapping(
-      "user_id" -> text,
-      "text" -> text.verifying("1文字以上入力してください", _.length >= 1).verifying("100文字以下で入力してください", _.length <= 100)
-    )(CommentFormData.apply)(CommentFormData.unapply)
-  )
 
   def index(post_id: String) = Action { implicit request =>
     var tempMap = Map[String, JsValue]()
     var result = Seq(Map[String, JsValue]())
     var count: Int = 0
     db.withConnection { implicit conn =>
-      val records = SQL("SELECT * FROM posts WHERE parent_post_id = {id} ORDER BY posted_at DESC").on("id" -> post_id).as(commentsParser.*)
+      // postsからコメントを抽出
+      val records = SQL("SELECT * FROM posts WHERE parent_post_id = {id} ORDER BY posted_at DESC").on("id" -> post_id).as(postParser.*)
       for (record <- records) {
         tempMap += ("id" -> Json.toJson(record.id), "user_id" -> Json.toJson(record.user_id), "text" -> Json.toJson(record.text), "parent_post_id" -> Json.toJson(record.parent_post_id),
           "comment_count" -> Json.toJson(SQL("SELECT COUNT(*) FROM posts WHERE parent_post_id = {id}").on("id" -> record.id).as(SqlParser.int("COUNT(*)").singleOpt).getOrElse("0").toString), "posted_at" -> Json.toJson(record.posted_at.toString))
@@ -60,7 +38,7 @@ class CommentController @Inject()(db: Database, cc: ControllerComponents) extend
     var isBadRequestFlag: String = "ok"
     // postデータ抽出
     val anyData = Map("user_id" -> textBody.get("user_id").as[String], "text" -> textBody.get("text").as[String])
-    commentForm.bind(anyData).fold(
+    postForm.bind(anyData).fold(
       // エラーの場合、400エラーでエラー内容表示
       hasError => BadRequest(Json.toJson(Map("result" -> "NG", "message" -> hasError.error("text").get.message.toString))),
       userData => {
@@ -91,7 +69,4 @@ class CommentController @Inject()(db: Database, cc: ControllerComponents) extend
       }
     )
   }
-
-  def uuid = java.util.UUID.randomUUID.toString
-
 }

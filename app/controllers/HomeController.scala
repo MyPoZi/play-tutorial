@@ -3,7 +3,6 @@ package controllers
 import java.sql.SQLException
 
 import javax.inject._
-import play.api._
 import play.api.mvc._
 import play.api.db.Database
 
@@ -38,11 +37,4 @@ class HomeController @Inject()(db: Database, cc: ControllerComponents) extends A
     }
     Ok(msg).as("application/json")
   }
-
-//  def index() = Action { implicit request =>
-//    db.withConnection { implicit conn =>
-//      val result:List[String] = SQL("Select * from test_users").as(SqlParser.str("name").*)
-//      Ok("hoge").as("application/json")
-//    }
-//  }
 }
